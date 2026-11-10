@@ -10,14 +10,9 @@ from compiler.array_analyzer import ArrayAnalyzer
 from compiler.address_coefficient_calculator import AddressCoefficientCalculator
 from compiler.generalized_address_generator import GeneralizedAddressGenerator
 from compiler.generalized_incremental_generator import GeneralizedIncrementalGenerator
-from compiler.pattern_analyzer import PatternAnalyzer
-from compiler.address_transformer import AddressTransformer
-from compiler.loop_interchange import LoopInterchange
 
-from benchmarks.correctness import CorrectnessTester
 from benchmarks.generalized_correctness import GeneralizedCorrectnessTester
 from benchmarks.generalized_benchmark import GeneralizedBenchmark
-from benchmarks.benchmark import Benchmark
 
 
 st.set_page_config(
@@ -234,73 +229,8 @@ if st.button(
                     f"Incremental optimization unavailable: {error}"
                 )
 
-        # 7. Restricted Incremental Optimization
-        st.header("7. Restricted Incremental Optimization")
-
-        pattern = None
-
-        try:
-            pattern = PatternAnalyzer().analyze(ast)
-
-            transformer = AddressTransformer(array_info)
-
-            restricted_tac = transformer.transform(
-                array_name=pattern["array_name"],
-                row_variable=pattern["row_variable"],
-                column_variable=pattern["column_variable"],
-                row_limit=pattern["row_limit"],
-                column_limit=pattern["column_limit"],
-                expression=str(pattern["expression"])
-            )
-
-            st.code(
-                "\n".join(restricted_tac),
-                language="text"
-            )
-
-        except Exception as error:
-            st.info(
-                f"Restricted optimization not applicable: {error}"
-            )
-
-        # 8. Loop Interchange
-        st.header("8. Loop Interchange")
-
-        try:
-            interchange_result = LoopInterchange().interchange(ast)
-
-            st.success("Loop interchange completed")
-
-            st.write(
-                f"New outer loop: "
-                f"{interchange_result['outer_variable']}"
-            )
-
-            st.write(
-                f"New inner loop: "
-                f"{interchange_result['inner_variable']}"
-            )
-
-            optimized_ast = interchange_result["optimized_ast"]
-
-            interchange_tac = TACGenerator({}).generate(
-                optimized_ast
-            )
-
-            st.subheader("Interchanged TAC")
-
-            st.code(
-                "\n".join(interchange_tac),
-                language="text"
-            )
-
-        except Exception as error:
-            st.info(
-                f"Loop interchange not applicable: {error}"
-            )
-
-        # 9. Generalized Correctness Verification
-        st.header("9. Generalized Correctness Verification")
+        # 7. Independent Generalized Correctness Verification
+        st.header("7. Generalized Correctness Verification")
 
         if generalized_result is not None and loop_variables is not None:
             try:
@@ -308,6 +238,7 @@ if st.button(
 
                 verification = tester.test(
                     coefficient_result=generalized_result,
+                    index_expressions=index_expressions,
                     loop_variables=loop_variables,
                     loop_limits=loop_limits,
                     array_info=array_info
@@ -315,14 +246,14 @@ if st.button(
 
                 if verification["correct"]:
                     st.success(
-                        "Generalized correctness verification passed"
+                        "Independent correctness verification passed"
                     )
                 else:
                     st.error(
-                        "Generalized correctness verification failed"
+                        "Correctness verification failed"
                     )
 
-                col1, col2, col3 = st.columns(3)
+                col1, col2, col3, col4 = st.columns(4)
 
                 col1.metric(
                     "Addresses Checked",
@@ -339,22 +270,27 @@ if st.button(
                     verification["mismatches"]
                 )
 
+                col4.metric(
+                    "Out-of-Bounds",
+                    verification["out_of_bounds"]
+                )
+
                 with st.expander("Verification Details"):
                     st.json(verification)
 
             except Exception as error:
-                st.info(
+                st.warning(
                     f"Correctness verification unavailable: {error}"
                 )
 
         else:
             st.info(
                 "Correctness verification skipped because "
-                "generalized address generation was unavailable."
+                "generalized address optimization was unavailable."
             )
 
-        # 10. Generalized Performance Comparison
-        st.header("10. Generalized Performance Comparison")
+        # 8. Generalized Performance Comparison
+        st.header("8. Generalized Performance Comparison")
 
         if (
             generalized_result is not None

@@ -30,6 +30,7 @@ tester = GeneralizedCorrectnessTester()
 
 verification = tester.test(
     coefficient_result=result,
+    index_expressions=assignment["target"]["indices"],
     loop_variables=["i", "j"],
     loop_limits=[100, 100],
     array_info=array_info
